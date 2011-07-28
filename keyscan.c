@@ -7,6 +7,7 @@
 #include <mach/irqs.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
+#include <linux/device.h>
 
 int keyscan_major = 250;
 int keyscan_minor = 0;
@@ -16,6 +17,7 @@ const int keyset2[] = {7, 8, 9, 15};
 const int keyset11[] = {4, 5, 6, 14};
 const int keyset19[] = {1, 2, 3, 13};
 
+struct class *keyboard_class;
 struct cdev cdev;
 int data = 0;
 
@@ -26,7 +28,7 @@ unsigned long *GPFDAT = NULL;
 unsigned long *GPGCON = NULL;
 unsigned long *GPGDAT = NULL;
 
-static ssize_t keyscan_read(struct file *filep, char *buff, size_t count, loff_t *offp)
+ssize_t keyscan_read(struct file *filep, char *buff, size_t count, loff_t *offp)
 {
 	ssize_t ret = 0;
 
@@ -38,9 +40,22 @@ static ssize_t keyscan_read(struct file *filep, char *buff, size_t count, loff_t
 	return ret;
 }
 
+ssize_t keyscan_write(struct file *filep, const char *buff, size_t count, loff_t *offp)
+{
+	ssize_t ret = 0;
+
+	if (copy_from_user(&data, buff, sizeof(data)))
+	{
+		ret = -EFAULT;
+	}
+
+	return ret;
+}
+
 struct file_operations keyscan_fops = {
 	.owner = THIS_MODULE,
 	.read = keyscan_read,
+	.write = keyscan_write,
 };
 
 //set interrupt register to input mode
@@ -295,15 +310,29 @@ static void char_reg_setup_cdev(void)
 {
 	int error;
 	dev_t dev;
-	
+
 	dev = MKDEV(keyscan_major, keyscan_minor);
 
 	cdev_init(&cdev, &keyscan_fops);
 	cdev.owner = THIS_MODULE;
 	cdev.ops = &keyscan_fops;
+
 	error = cdev_add(&cdev, dev, 1);
+
 	if (error)
+	{
 		printk(KERN_NOTICE "Error %d adding char_reg_setup_cdev\n", error);
+	}
+
+	keyboard_class =class_create(THIS_MODULE, "keyboard_class");
+
+	if (IS_ERR(keyboard_class))
+	{
+		printk("Failed to create keyboard_class\n");
+		return;
+	}
+
+	device_create(keyboard_class, NULL, dev, NULL, "KEYSCAN");
 }
 
 static int __init keyscan_init(void)
@@ -314,6 +343,7 @@ static int __init keyscan_init(void)
 	dev = MKDEV(keyscan_major, keyscan_minor);
 
 	ret = register_chrdev_region(dev, 1, "KEYSCAN");
+
 	if (ret)
 	{
 		printk(KERN_WARNING "keyboard: cat't get the major number %d\n", keyscan_major);
@@ -342,6 +372,9 @@ static void __exit keyscan_exit(void)
 {
 	dev_t dev;
 	dev = MKDEV(keyscan_major, keyscan_minor);
+
+	device_destroy(keyboard_class, dev);
+	class_destroy(keyboard_class);
 
 	cdev_del(&cdev);
 	unregister_chrdev_region(dev, 1); 
