@@ -4,10 +4,11 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/irqreturn.h>
+#include <linux/device.h>
+#include <linux/spinlock.h>
 #include <mach/irqs.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
-#include <linux/device.h>
 
 int keyscan_major = 250;
 int keyscan_minor = 0;
@@ -27,6 +28,35 @@ unsigned long *GPFCON = NULL;
 unsigned long *GPFDAT = NULL;
 unsigned long *GPGCON = NULL;
 unsigned long *GPGDAT = NULL;
+
+static DEFINE_SPINLOCK(keyscan_lock);
+
+int keyscan_count = 0;
+
+static int keyscan_open(struct inode *inode, struct file *filp)
+{
+	spin_lock(&keyscan_lock);
+
+	if (keyscan_count > 0)
+	{
+		spin_unlock(&keyscan_lock);
+		return -EBUSY;
+	}
+
+	keyscan_count++;
+	spin_unlock(&keyscan_lock);
+
+	return 0;
+}
+
+static int keyscan_release(struct inode *inode, struct file *filp)
+{
+	spin_lock(&keyscan_lock);
+	keyscan_count--;
+	spin_unlock(&keyscan_lock);
+
+	return 0;
+}
 
 ssize_t keyscan_read(struct file *filep, char *buff, size_t count, loff_t *offp)
 {
@@ -56,6 +86,8 @@ struct file_operations keyscan_fops = {
 	.owner = THIS_MODULE,
 	.read = keyscan_read,
 	.write = keyscan_write,
+	.open = keyscan_open,
+	.release = keyscan_release,
 };
 
 //set interrupt register to input mode
