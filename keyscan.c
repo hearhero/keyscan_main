@@ -37,7 +37,7 @@ static int keyscan_open(struct inode *inode, struct file *filp)
 {
 	spin_lock(&keyscan_lock);
 
-	if (keyscan_count > 0)
+	if (0 < keyscan_count)
 	{
 		spin_unlock(&keyscan_lock);
 		return -EBUSY;
@@ -62,7 +62,7 @@ ssize_t keyscan_read(struct file *filep, char *buff, size_t count, loff_t *offp)
 {
 	ssize_t ret = 0;
 
-	if (copy_to_user(buff, &data, sizeof(data)))
+	if (0 < copy_to_user(buff, &data, sizeof(data)))
 	{
 		ret = -EFAULT;
 	}
@@ -74,7 +74,7 @@ ssize_t keyscan_write(struct file *filep, const char *buff, size_t count, loff_t
 {
 	ssize_t ret = 0;
 
-	if (copy_from_user(&data, buff, sizeof(data)))
+	if (0 < copy_from_user(&data, buff, sizeof(data)))
 	{
 		ret = -EFAULT;
 	}
@@ -125,7 +125,8 @@ static void keyscan_reg_clear(void)
 //set KSCAN0~3 to specified value: 0111, 1011, 1101, 1110
 static void keyscan_reg_set(int value)
 {
-	switch (value) {
+	switch (value) 
+	{
 	case 7:
 		keyscan_reg_clear();
 		*GPGDAT |= 1<<6;
@@ -283,7 +284,8 @@ static irqreturn_t keyscan_interrupt(int irqno, void *dev_id)
 {
 	interrupt_reg_set();
 
-	switch (irqno) {
+	switch (irqno) 
+	{
 	case IRQ_EINT0:
 		keyscan_key_query1(keyset0, 0);
 		break;
@@ -351,12 +353,13 @@ static void char_reg_setup_cdev(void)
 
 	error = cdev_add(&cdev, dev, 1);
 
-	if (error)
+	if (0 > error)
 	{
 		printk(KERN_NOTICE "Error %d adding char_reg_setup_cdev\n", error);
+		return;
 	}
 
-	keyboard_class =class_create(THIS_MODULE, "keyboard_class");
+	keyboard_class = class_create(THIS_MODULE, "keyboard_class");
 
 	if (IS_ERR(keyboard_class))
 	{
@@ -376,7 +379,7 @@ static int __init keyscan_init(void)
 
 	ret = register_chrdev_region(dev, 1, "KEYSCAN");
 
-	if (ret)
+	if (0 > ret)
 	{
 		printk(KERN_WARNING "keyboard: cat't get the major number %d\n", keyscan_major);
 		return ret;
