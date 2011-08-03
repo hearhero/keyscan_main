@@ -2,11 +2,8 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/interrupt.h>
-#include <linux/irq.h>
-#include <linux/irqreturn.h>
 #include <linux/device.h>
 #include <linux/spinlock.h>
-#include <mach/irqs.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
@@ -208,7 +205,6 @@ static void keyscan_key_query1(const int *keyset, int bitmask)
 	if (!(*GPFDAT & (1 << bitmask)))
 	{
 		data = keyset[0];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 
@@ -217,7 +213,6 @@ static void keyscan_key_query1(const int *keyset, int bitmask)
 	if (!(*GPFDAT & (1 << bitmask)))
 	{
 		data = keyset[1];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 
@@ -226,7 +221,6 @@ static void keyscan_key_query1(const int *keyset, int bitmask)
 	if (!(*GPFDAT & (1 << bitmask)))
 	{
 		data = keyset[2];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 	
@@ -235,7 +229,6 @@ static void keyscan_key_query1(const int *keyset, int bitmask)
 	if (!(*GPFDAT & (1 << bitmask)))
 	{
 		data = keyset[3];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 }
@@ -248,7 +241,6 @@ static void keyscan_key_query2(const int *keyset, int bitmask)
 	if (!(*GPGDAT & (1 << bitmask)))
 	{
 		data = keyset[0];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 
@@ -257,7 +249,6 @@ static void keyscan_key_query2(const int *keyset, int bitmask)
 	if (!(*GPGDAT & (1 << bitmask)))
 	{
 		data = keyset[1];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 
@@ -266,7 +257,6 @@ static void keyscan_key_query2(const int *keyset, int bitmask)
 	if (!(*GPGDAT & (1 << bitmask)))
 	{
 		data = keyset[2];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 	
@@ -275,7 +265,6 @@ static void keyscan_key_query2(const int *keyset, int bitmask)
 	if (!(*GPGDAT & (1 << bitmask)))
 	{
 		data = keyset[3];
-		printk(KERN_INFO "K%d emitted\n", data);
 		return;
 	}
 }
@@ -372,7 +361,7 @@ static void char_reg_setup_cdev(void)
 
 static int __init keyscan_init(void)
 {
-	int ret;
+	int ret = 0;
 	dev_t dev;
 
 	dev = MKDEV(keyscan_major, keyscan_minor);
@@ -398,14 +387,13 @@ static int __init keyscan_init(void)
 	keyboard_reg_init();
 	interrupt_setup();
 
-	printk(KERN_INFO "KEYSCAN driver registered\n");
-
-	return 0;
+	return ret;
 }
 
 static void __exit keyscan_exit(void)
 {
 	dev_t dev;
+
 	dev = MKDEV(keyscan_major, keyscan_minor);
 
 	device_destroy(keyboard_class, dev);
@@ -420,8 +408,6 @@ static void __exit keyscan_exit(void)
 	iounmap(GPFDAT);
 	iounmap(GPGCON);
 	iounmap(GPGDAT);
-
-	printk(KERN_INFO "KEYSCAN driver unregistered\n");
 }
 
 module_init(keyscan_init);
