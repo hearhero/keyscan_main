@@ -302,20 +302,32 @@ static void interrupt_setup(void)
 	int error;
 
 	error = request_irq(IRQ_EINT0, keyscan_interrupt, IRQF_DISABLED | IRQF_TRIGGER_FALLING, "KEYSCAN_EINT0", NULL);
-	if (error)
+
+	if (0 > error)
+	{
 		goto end;
+	}
 	
 	error = request_irq(IRQ_EINT2, keyscan_interrupt, IRQF_DISABLED | IRQF_TRIGGER_FALLING, "KEYSCAN_EINT2", NULL);
-	if (error)
+
+	if (0 > error)
+	{
 		goto err0;
+	}
 
 	error = request_irq(IRQ_EINT11, keyscan_interrupt, IRQF_DISABLED | IRQF_TRIGGER_FALLING, "KEYSCAN_EINT11", NULL);
-	if (error)
+
+	if (0 > error)
+	{
 		goto err2;
+	}
 
 	error = request_irq(IRQ_EINT19, keyscan_interrupt, IRQF_DISABLED | IRQF_TRIGGER_FALLING, "KEYSCAN_EINT19", NULL);
-	if (!error)
+
+	if (0 == error)
+	{
 		goto end;
+	}
 
 	free_irq(IRQ_EINT11, NULL);
 
@@ -339,7 +351,6 @@ static void char_reg_setup_cdev(void)
 	cdev_init(&cdev, &keyscan_fops);
 	cdev.owner = THIS_MODULE;
 	cdev.ops = &keyscan_fops;
-
 	error = cdev_add(&cdev, dev, 1);
 
 	if (0 > error)
